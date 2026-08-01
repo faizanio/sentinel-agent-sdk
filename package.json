@@ -39,11 +39,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sentinel-ai/agent.git"
+    "url": "git+https://github.com/faizanio/sentinel-agent-sdk.git"
   },
-  "homepage": "https://github.com/sentinel-ai/agent#readme",
+  "homepage": "https://github.com/faizanio/sentinel-agent-sdk#readme",
   "bugs": {
-    "url": "https://github.com/sentinel-ai/agent/issues"
+    "url": "https://github.com/faizanio/sentinel-agent-sdk/issues"
   },
   "license": "MIT",
   "type": "module",
