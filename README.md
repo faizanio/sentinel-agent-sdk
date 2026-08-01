@@ -5,44 +5,89 @@
 ![npm](https://img.shields.io/npm/v/@sentinel-ai/agent)
 ![Node](https://img.shields.io/badge/node-18+-brightgreen)
 
-> **Sentinel** is an open-source, production-ready TypeScript AI Agent SDK built with a composable middleware pipeline (**Loom**) and deterministic execution tracing (**Sentinel**).
+> A lightweight, composable TypeScript SDK for building AI agents with built-in middleware pipelines and deterministic execution tracing.
 
 ---
 
-## 🌟 Hero
+## Why Sentinel AI Agent SDK?
 
-Traditional LLM wrappers hide execution state, making agent debugging unpredictable. **Sentinel** treats agent execution as a deterministic pipeline. With **Loom** middleware and **Sentinel** execution tracing, developers get end-to-end visibility, session memory management, composable guardrails, multi-agent handoffs, and strongly-typed structured outputs.
+Many TypeScript agent frameworks abstract LLM interactions behind opaque abstractions, making it difficult to intercept control flow, debug tool failures, or track execution history in production.
+
+Sentinel was built to address these challenges by prioritizing three core engineering principles:
+
+- **Reliability**: Every agent step—from LLM invocation to tool execution and output processing—is tracked in a structured, immutable trace.
+- **Observability**: Execution flows are inspectable in real time without requiring external telemetry vendor setups.
+- **Composability**: Mid-flight requests are managed through a Koa-style middleware pipeline (`Loom`), enabling clean separation of concern for logging, timing, memory, and safety filters.
 
 ---
 
-## ✨ Features
+## Why choose Sentinel?
 
-- 🤖 **Agent Runtime**: Extensible execution loop supporting providers, instructions, and tools.
+| Feature | Typical Agent SDKs | Sentinel AI Agent SDK |
+|---|---|---|
+| **Pipeline Control** | Fixed execution flow | Flexible middleware pipeline (`Loom`) |
+| **Execution Observability** | Requires external OpenTelemetry | Built-in deterministic event tracing (`Sentinel`) |
+| **State & Memory** | Tightly coupled to agent instance | Separated `Session` and `MemoryStore` models |
+| **Safety** | Global or ad-hoc validation | Composable Input, Tool, and Output `Guardrails` |
+| **Structured Data** | Raw JSON parsing | Zod validation with automatic single-retry fallback |
+| **Multi-Agent** | Complex graph engines | Explicit `HandoffManager` delegation chains |
+| **Architecture** | Heavy abstractions / dependencies | Lightweight, zero-dependency core runtime |
+| **Type Safety** | Partial dynamic typing | End-to-end strongly typed TypeScript API |
+
+---
+
+## Architecture
+
+```
+User Input
+    │
+    ▼
+Loom Middleware Pipeline
+    │
+    ▼
+Input Guardrails
+    │
+    ▼
+Agent Runtime Loop ◄──► Provider (OpenAI, etc.)
+    │
+    ▼
+Tool Execution (Tool Guardrails)
+    │
+    ▼
+Output Guardrails / Structured Output Validation
+    │
+    ▼
+Sentinel Execution Trace & Result
+```
+
+---
+
+## Features
+
+- 🤖 **Agent Runtime**: Extensible runtime loop managing messages, tools, and provider interactions.
 - 🧵 **Loom Middleware**: Pipeline architecture powered by a Koa-style composition engine (`compose()`).
-- 🛡️ **Sentinel Reliability**: Automatic, zero-config event recording (`Trace`) for full execution observability.
-- 🧠 **Memory & Sessions**: Built-in stateful session memory management (`Session`, `InMemoryStore`).
-- 🚧 **Guardrails**: Intercept, validate, modify, or reject inputs, tool executions, and outputs.
-- 🤝 **Agent Handoffs**: Multi-agent orchestration and delegation with cycle protection.
-- 🎯 **Structured Output**: Strictly typed Zod schema parsing with single-retry error recovery.
+- 🛡️ **Sentinel Reliability**: Event-based tracing for complete execution auditing (`Trace`).
+- 🧠 **Memory & Sessions**: Stateful session isolation using `Session` and `MemoryStore`.
+- 🚧 **Guardrails**: Intercept, inspect, modify, or reject inputs, tool invocations, and outputs.
+- 🤝 **Agent Handoffs**: Multi-agent delegation with cycle protection.
+- 🎯 **Structured Output**: Typed Zod schema validation with automatic retry recovery.
 
 ---
 
-## 📦 Installation
-
-To install the SDK, run:
+## Installation
 
 ```bash
 npm install @sentinel-ai/agent
 ```
 
-> **Note on Dependencies**: `dotenv`, `openai`, and `zod` are included as package dependencies and will be installed automatically by `npm`. You do not need to install them separately unless you wish to import `zod` directly in your application code for defining schemas:
+> **Note**: `zod`, `openai`, and `dotenv` are included in package dependencies. Install `zod` separately only if you define custom schemas directly in your application code:
 > ```bash
 > npm install zod
 > ```
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```ts
 import 'dotenv/config';
@@ -70,22 +115,22 @@ const agent = new Agent({
 
 const result = await agent.run("What's the weather in Tokyo?");
 console.log(result.output);
-console.log('Execution Trace:', result.trace);
+console.log(result.trace.events);
 ```
 
 ---
 
-## 🛠️ Tools
+## Tools
 
-Tools are strongly typed functions that agents can invoke using Zod schemas for input validation:
+Define strongly typed tools with Zod schemas for input validation:
 
 ```ts
 import { tool } from '@sentinel-ai/agent';
 import { z } from 'zod';
 
-const calculatorTool = tool({
+const calculator = tool({
   name: 'calculator',
-  description: 'Perform basic math calculations',
+  description: 'Perform arithmetic operations',
   schema: z.object({
     a: z.number(),
     b: z.number(),
@@ -104,100 +149,103 @@ const calculatorTool = tool({
 
 ---
 
-## 🧠 Memory
+## Memory & Sessions
 
-Sentinel provides a modular `MemoryStore` abstraction. The default `InMemoryStore` manages session message histories in memory:
+Isolate conversation history per session without altering agent configuration:
+
+```ts
+const session = agent.session('user-session-101');
+
+const r1 = await session.run('My name is Alice.');
+console.log(r1.output);
+
+const r2 = await session.run('What is my name?');
+console.log(r2.output); // "Your name is Alice."
+```
+
+Custom stores can be provided by implementing the `MemoryStore` interface:
 
 ```ts
 import { InMemoryStore } from '@sentinel-ai/agent';
 
-const memory = new InMemoryStore();
-memory.createSession('user-101');
+const store = new InMemoryStore();
+const session = agent.session('custom-session', store);
 ```
 
 ---
 
-## 💬 Sessions
+## Guardrails
 
-Sessions isolate state across interactions by automatically persisting conversation history:
-
-```ts
-const session = agent.session('chat-session-1');
-
-const reply1 = await session.run('Hi, my name is Alice.');
-console.log(reply1.output);
-
-const reply2 = await session.run('What is my name?');
-console.log(reply2.output); // "Your name is Alice."
-```
-
----
-
-## 🚧 Guardrails
-
-Guardrails allow developers to filter or transform inputs, tool calls, and outputs:
+Intercept and validate execution at three distinct stages:
 
 ```ts
 agent.guardrails({
   input: [
     async (input) => {
-      if (input.includes('hack')) {
-        return { allowed: false, reason: 'Disallowed keyword detected' };
+      if (input.includes('restricted')) {
+        return { allowed: false, reason: 'Restricted content' };
+      }
+      return { allowed: true };
+    },
+  ],
+  tool: [
+    async (toolName, args) => {
+      if (toolName === 'delete_user') {
+        return { allowed: false, reason: 'Destructive tool blocked' };
       }
       return { allowed: true };
     },
   ],
   output: [
-    async (output) => {
-      return output.trim();
-    },
+    async (output) => output.trim(),
   ],
 });
 ```
 
 ---
 
-## 🎯 Structured Output
+## Structured Output
 
-Force agents to respond with validated Zod schemas. If initial JSON parsing fails, Sentinel performs a single automatic retry:
+Request validated JSON responses against a Zod schema. If parsing fails, Sentinel issues an automatic single-retry attempt:
 
 ```ts
+import { z } from 'zod';
+
 const result = await agent.run({
-  input: 'Generate a fictional software engineer profile.',
+  input: 'Generate a user profile for a software engineer.',
   output: z.object({
     name: z.string(),
     role: z.string(),
     yearsExperience: z.number(),
-    skills: z.array(z.string()),
   }),
 });
 
-console.log(result.data.name); // Strongly typed!
+console.log(result.data.name); // Fully typed object
 ```
 
 ---
 
-## 🤝 Handoffs
+## Handoffs
 
-Coordinate multi-agent delegation chains using `HandoffManager`:
+Orchestrate agent delegation chains using `HandoffManager`:
 
 ```ts
 import { Agent, HandoffManager, OpenAIProvider } from '@sentinel-ai/agent';
 
 const provider = new OpenAIProvider({ apikey: process.env.OPENAI_API_KEY! });
 
-const planner = new Agent({ name: 'Planner', instructions: 'Break down complex requests.', provider });
-const writer = new Agent({ name: 'Writer', instructions: 'Draft content.', provider });
+const planner = new Agent({ name: 'Planner', instructions: 'Plan task steps.', provider });
+const writer = new Agent({ name: 'Writer', instructions: 'Draft response.', provider });
 
 planner.handoff(writer);
 
-const result = await HandoffManager.run(planner, 'Write an article on quantum computing.');
+const result = await HandoffManager.run(planner, 'Outline and write a guide on TypeScript.');
 console.log(result.output);
 ```
 
 ---
 
-## 🧵 Loom Middleware
+## Loom Middleware
 
 Loom provides Koa-style middleware composition around the agent runtime loop:
 
@@ -207,81 +255,102 @@ import { loggingMiddleware, timingMiddleware } from '@sentinel-ai/agent';
 agent.use(loggingMiddleware());
 agent.use(timingMiddleware());
 
-// Custom Middleware
-agent.use(async (ctx, next) => {
-  console.log('Before execution context:', ctx.input);
+// Custom middleware
+agent.use(async (context, next) => {
+  const start = Date.now();
   const result = await next();
-  console.log('After execution context:', result.output);
+  context.metadata['customTiming'] = Date.now() - start;
   return result;
 });
 ```
 
 ---
 
-## 🛡️ Sentinel Tracing
+## Sentinel Tracing
 
-Every agent run generates an immutable execution `Trace` containing all lifecycle events (`run.*`, `llm.*`, `tool.*`, `guardrail.*`, `session.*`, `handoff.*`):
+Every agent invocation records structured events (`run.*`, `llm.*`, `tool.*`, `guardrail.*`, `session.*`, `handoff.*`) in a sealed `Trace` object:
 
 ```ts
 import { Sentinel } from '@sentinel-ai/agent';
 
-const result = await agent.run('Hello agent');
+const result = await agent.run('Hello');
 
-// Access trace from result
+// Access trace directly from RunResult
+console.log(result.trace.duration);
 console.log(result.trace.events);
 
-// Access global trace registry
+// Access process-level trace registry
 const allTraces = Sentinel.listTraces();
-const singleTrace = Sentinel.getTrace(result.trace.id);
+const trace = Sentinel.getTrace(result.trace.id);
 ```
 
 ---
 
-## 💡 Examples
+## Design Principles
 
-Complete executable example scripts are located in [`src/examples/basic.ts`](file:///Users/faizee/Developer/AI%20Engineering/sentinel-agent-sdk/src/examples/basic.ts).
+- **Composable over Monolithic**: Small, single-purpose abstractions (middleware, guardrails, stores) composed together.
+- **Reliability First**: Every state mutation and LLM turn generates an immutable trace event.
+- **Type-Safe APIs**: Strict TypeScript interfaces with zero use of `any`.
+- **Framework-Independent Runtime**: Core agent loop remains lean without external runtime dependencies.
+- **Developer Experience**: Intuitive APIs requiring minimal boilerplate.
+- **Explicit Execution Flow**: Control flow decisions are visible and editable via middleware and guardrails.
 
-To run locally:
+---
+
+## Examples
+
+Runnable example scripts are available in [`src/examples/basic.ts`](./src/examples/basic.ts).
+
+Run locally:
 ```bash
 npx tsx src/examples/basic.ts
 ```
 
 ---
 
-## 📖 API Reference
+## API Reference
 
 ### `Agent`
-- `new Agent(config: IAgentConfig)`
-- `agent.use(middleware: Middleware)`: Register Loom middleware.
-- `agent.guardrails(config: GuardrailConfig)`: Attach guardrails.
-- `agent.handoff(targetAgent: Agent)`: Target agent for handoff.
-- `agent.session(sessionId: string)`: Create or load a Session.
-- `agent.run(input: string | RunInput<T>)`: Execute agent run.
+Primary class for defining and executing agent runtimes.
+- `new Agent(config: IAgentConfig)`: Initializes an Agent.
+- `use(middleware: Middleware): this`: Registers a Loom middleware.
+- `guardrails(config: GuardrailConfig): this`: Attaches guardrails.
+- `handoff(target: Agent): this`: Sets handoff target agent.
+- `session(sessionId: string, store?: MemoryStore): Session`: Creates or retrieves a session.
+- `run(input: string | RunInput<T>): Promise<RunResult>`: Executes an agent run.
+
+### `tool()`
+Factory function for creating validated tools.
+- `tool(config: Tool<TSchema>): Tool<TSchema>`: Creates a tool instance.
+
+### `OpenAIProvider`
+LLM provider implementation for OpenAI models.
+- `new OpenAIProvider(config: { apikey: string; model?: string })`: Initializes OpenAI provider.
 
 ### `Sentinel`
-- `Sentinel.getTrace(id: string)`: Retrieve trace by ID.
-- `Sentinel.listTraces()`: List recorded traces.
-- `Sentinel.clear()`: Clear recorded traces.
+Process-wide registry for managing execution traces.
+- `Sentinel.getTrace(id: string): Trace | undefined`: Retrieves a trace by ID.
+- `Sentinel.listTraces(): Trace[]`: Returns all recorded traces.
+- `Sentinel.clear(): void`: Clears the trace registry.
+
+### `HandoffManager`
+Orchestrator for managing multi-agent delegation chains.
+- `HandoffManager.run(startAgent: Agent, input: string, options?: HandoffOptions): Promise<RunResult>`: Executes a handoff chain until completion or max limit.
+- `HandoffManager.handoff(from: Agent, to: Agent, input: string): Promise<RunResult>`: Performs an explicit single-agent handoff.
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [x] Phase 1: Core Runtime & OpenAI Provider
 - [x] Phase 2: Loom Middleware Pipeline
 - [x] Phase 3: Sentinel Execution Tracing
 - [x] Phase 4: Memory, Guardrails, Handoffs & Structured Output
 - [ ] Phase 5: Additional LLM Providers (Anthropic, Gemini)
-- [ ] Phase 6: Persistent File/Database Memory Stores
+- [ ] Phase 6: Persistent Storage Adapters (Redis, Postgres)
 
 ---
 
-## 🏷️ Topics
+## License
 
-`typescript` `ai` `agent` `llm` `openai` `sdk` `middleware` `tracing` `guardrails` `memory`
-
----
-
-## 📄 License
-
-[MIT License](file:///Users/faizee/Developer/AI%20Engineering/sentinel-agent-sdk/LICENSE) © 2026 Sentinel AI
+[MIT License](./LICENSE) © 2026 Sentinel AI
