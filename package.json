@@ -1,0 +1,58 @@
+{
+  "name": "@sentinel-ai/agent",
+  "version": "1.0.1",
+  "description": "Open-source TypeScript AI Agent SDK with Loom middleware and Sentinel reliability tracing",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "agent-sdk",
+    "sentinel",
+    "loom",
+    "middleware",
+    "typescript",
+    "reliability",
+    "tracing",
+    "llm",
+    "openai",
+    "sdk",
+    "guardrails",
+    "memory"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sentinel-ai/agent.git"
+  },
+  "homepage": "https://github.com/sentinel-ai/agent#readme",
+  "bugs": {
+    "url": "https://github.com/sentinel-ai/agent/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^26.1.2"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "openai": "^7.3.0",
+    "zod": "^4.4.3"
+  }
+}
