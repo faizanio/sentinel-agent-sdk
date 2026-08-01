@@ -2,7 +2,7 @@
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue)
 ![MIT](https://img.shields.io/badge/license-MIT-green)
-![npm](https://img.shields.io/npm/v/@sentinel-ai/agent)
+![npm](https://img.shields.io/npm/v/@sentinel-ai-sdk/agent)
 ![Node](https://img.shields.io/badge/node-18+-brightgreen)
 
 > A lightweight, composable TypeScript SDK for building AI agents with built-in middleware pipelines and deterministic execution tracing.
@@ -77,7 +77,7 @@ Sentinel Execution Trace & Result
 ## Installation
 
 ```bash
-npm install @sentinel-ai/agent
+npm install @sentinel-ai-sdk/agent
 ```
 
 > **Note**: `zod`, `openai`, and `dotenv` are included in package dependencies. Install `zod` separately only if you define custom schemas directly in your application code:
@@ -92,7 +92,7 @@ npm install @sentinel-ai/agent
 ```ts
 import 'dotenv/config';
 import { z } from 'zod';
-import { Agent, OpenAIProvider, tool } from '@sentinel-ai/agent';
+import { Agent, OpenAIProvider, tool } from '@sentinel-ai-sdk/agent';
 
 const weatherTool = tool({
   name: 'get_weather',
@@ -125,7 +125,7 @@ console.log(result.trace.events);
 Define strongly typed tools with Zod schemas for input validation:
 
 ```ts
-import { tool } from '@sentinel-ai/agent';
+import { tool } from '@sentinel-ai-sdk/agent';
 import { z } from 'zod';
 
 const calculator = tool({
@@ -166,7 +166,7 @@ console.log(r2.output); // "Your name is Alice."
 Custom stores can be provided by implementing the `MemoryStore` interface:
 
 ```ts
-import { InMemoryStore } from '@sentinel-ai/agent';
+import { InMemoryStore } from '@sentinel-ai-sdk/agent';
 
 const store = new InMemoryStore();
 const session = agent.session('custom-session', store);
@@ -230,7 +230,7 @@ console.log(result.data.name); // Fully typed object
 Orchestrate agent delegation chains using `HandoffManager`:
 
 ```ts
-import { Agent, HandoffManager, OpenAIProvider } from '@sentinel-ai/agent';
+import { Agent, HandoffManager, OpenAIProvider } from '@sentinel-ai-sdk/agent';
 
 const provider = new OpenAIProvider({ apikey: process.env.OPENAI_API_KEY! });
 
@@ -250,7 +250,7 @@ console.log(result.output);
 Loom provides Koa-style middleware composition around the agent runtime loop:
 
 ```ts
-import { loggingMiddleware, timingMiddleware } from '@sentinel-ai/agent';
+import { loggingMiddleware, timingMiddleware } from '@sentinel-ai-sdk/agent';
 
 agent.use(loggingMiddleware());
 agent.use(timingMiddleware());
@@ -271,7 +271,7 @@ agent.use(async (context, next) => {
 Every agent invocation records structured events (`run.*`, `llm.*`, `tool.*`, `guardrail.*`, `session.*`, `handoff.*`) in a sealed `Trace` object:
 
 ```ts
-import { Sentinel } from '@sentinel-ai/agent';
+import { Sentinel } from '@sentinel-ai-sdk/agent';
 
 const result = await agent.run('Hello');
 
